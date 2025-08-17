@@ -4,7 +4,7 @@ import { auth, db } from "@/firebase/admin";
 import { Auth } from "firebase-admin/auth";
 
 import { cookies } from "next/headers";
-import { success } from "zod";
+import { any, success } from "zod";
 
 type SignUpParams = {
   uid: string;
@@ -81,6 +81,7 @@ export async function setSessionCookies(idToken:string) {
     const sessionCookie=await auth.createSessionCookie(idToken,{
         expiresIn:ONE_WEEK*1000,
     })
+    
     cookieStore.set('session',sessionCookie,{
       maxAge:ONE_WEEK,
       httpOnly:true,
@@ -88,4 +89,38 @@ export async function setSessionCookies(idToken:string) {
         path:'/',
         sameSite:'lax',
     })
+}
+
+export async function getCurrentUser(): Promise<User | null> {
+  const cookieStore = await cookies();
+
+  const sessionCookie = cookieStore.get("session")?.value;
+  if (!sessionCookie) return null;
+
+  try {
+    const decodedClaims = await auth.verifySessionCookie(sessionCookie, true);
+
+    // get user info from db
+    const userRecord = await db
+      .collection("users")
+      .doc(decodedClaims.uid)
+      .get();
+    if (!userRecord.exists) return null;
+
+    return {
+      ...userRecord.data(),
+      id: userRecord.id,
+    } as User;
+  } catch (error) {
+    console.log(error);
+
+    // Invalid or expired session
+    return null;
+  }
+}
+
+// Check if user is authenticated
+export async function isAuthenticated() {
+  const user = await getCurrentUser();
+  return !!user;
 }

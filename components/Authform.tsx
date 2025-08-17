@@ -18,7 +18,7 @@ import { signIn, signUp } from "@/lib/actions/auth.actions"
 
 const AuthFormSchema = (type:FormType) =>{
     return z.object({ 
-        name:type==='sign-in' ? z.string().min(3):z.string().optional(),
+        name:type==='sign-up' ? z.string().min(3):z.string().optional(),
         email:z.string().email(),
         password:z.string().min(3)
     })
